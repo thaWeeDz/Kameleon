@@ -6,6 +6,20 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Global error handler for uncaught exceptions
+process.on('uncaughtException', (error) => {
+  log(`Uncaught Exception: ${error.message}`, 'error');
+  log(error.stack || '', 'error');
+  // Keep the process alive
+  console.error('Process continuing despite uncaught exception');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  log(`Unhandled Rejection at: ${promise}, reason: ${reason}`, 'error');
+  // Keep the process alive
+  console.error('Process continuing despite unhandled rejection');
+});
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -37,33 +51,43 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
+  try {
+    const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    // Enhanced error handling middleware
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    throw err;
-  });
+      log(`Error: ${message} (${status})`, 'error');
+      if (err.stack) {
+        log(err.stack, 'error');
+      }
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+      res.status(status).json({ message });
+      // Don't throw the error again, handle it here
+      if (status === 500) {
+        console.error('Encountered server error but continuing execution:', err);
+      }
+    });
+
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
+    } else {
+      serveStatic(app);
+    }
+
+    const port = 5000;
+    server.listen({
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    }, () => {
+      log(`serving on port ${port}`);
+    });
+  } catch (error) {
+    log(`Failed to start server: ${error}`, 'error');
+    // Keep the process alive even if startup fails
+    console.error('Server startup failed but process continuing');
   }
-
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client
-  const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
 })();
