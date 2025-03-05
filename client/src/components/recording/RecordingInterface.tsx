@@ -36,7 +36,6 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
     return () => clearInterval(timer);
   }, [isRecording]);
 
-  // Clean up media stream when component unmounts
   useEffect(() => {
     return () => {
       if (stream) {
@@ -45,7 +44,6 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
     };
   }, [stream]);
 
-  // Update video preview when stream changes
   useEffect(() => {
     if (videoRef.current && stream && mediaType === 'video') {
       videoRef.current.srcObject = stream;
@@ -58,24 +56,51 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const checkMediaSupport = async () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('Media devices niet ondersteund in deze browser.');
+    }
+  };
+
   const setupMediaStream = async () => {
     try {
+      await checkMediaSupport();
+
+      // Stop any existing streams
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
 
-      const newStream = await navigator.mediaDevices.getUserMedia({
+      console.log(`Requesting ${mediaType} permissions...`);
+      const constraints = {
         audio: true,
-        video: mediaType === 'video'
-      });
+        video: mediaType === 'video' ? {
+          facingMode: 'user',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        } : false
+      };
+
+      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('Permission granted, stream obtained');
 
       setStream(newStream);
       return newStream;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error accessing media devices:', error);
+      let errorMessage = 'Er is een fout opgetreden bij het openen van de media apparaten.';
+
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage = 'Toegang tot microfoon/camera is geweigerd. Geef toestemming in je browser om op te nemen.';
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMessage = `Geen ${mediaType === 'video' ? 'camera' : 'microfoon'} gevonden.`;
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorMessage = `Kan geen toegang krijgen tot de ${mediaType === 'video' ? 'camera' : 'microfoon'}. Mogelijk wordt deze al door een andere applicatie gebruikt.`;
+      }
+
       toast({
-        title: "Toegang geweigerd",
-        description: "Geef toegang tot je microfoon/camera om op te nemen.",
+        title: "Fout bij opname starten",
+        description: errorMessage,
         variant: "destructive",
       });
       throw error;
@@ -84,7 +109,12 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
 
   const startRecording = async () => {
     try {
+      console.log('Starting recording setup...');
       const mediaStream = await setupMediaStream();
+
+      if (!MediaRecorder.isTypeSupported('video/webm') && !MediaRecorder.isTypeSupported('audio/webm')) {
+        throw new Error('WebM format wordt niet ondersteund in deze browser.');
+      }
 
       mediaRecorder.current = new MediaRecorder(mediaStream);
       mediaChunks.current = [];
@@ -111,6 +141,7 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
           });
 
           const recordingData = await response.json();
+          console.log('Recording saved:', recordingData);
 
           queryClient.invalidateQueries({ 
             queryKey: [`/api/sessions/${sessionId}/recordings`] 
@@ -130,9 +161,11 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
         }
       };
 
+      console.log('Starting MediaRecorder...');
       mediaRecorder.current.start();
       setIsRecording(true);
       setRecordingTime(0);
+      console.log('Recording started successfully');
 
     } catch (error) {
       console.error('Error starting recording:', error);
