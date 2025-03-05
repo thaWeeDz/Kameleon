@@ -68,6 +68,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(sessions);
   });
 
+  app.get("/api/sessions/:id", async (req, res) => {
+    const session = await storage.getSession(Number(req.params.id));
+    if (!session) return res.status(404).json({ message: "Sessie niet gevonden" });
+    res.json(session);
+  });
+
   app.post("/api/sessions", async (req, res) => {
     const result = insertSessionSchema.safeParse(req.body);
     if (!result.success) {
@@ -92,7 +98,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(201).json(observation);
   });
 
-  // New Recording routes
+  // Recordings routes
   app.get("/api/sessions/:id/recordings", async (req, res) => {
     const recordings = await storage.getRecordings(Number(req.params.id));
     res.json(recordings);
@@ -122,7 +128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // New Tagged Moment routes
+  // Tagged Moments routes
   app.get("/api/recordings/:id/moments", async (req, res) => {
     const moments = await storage.getTaggedMoments(Number(req.params.id));
     res.json(moments);
