@@ -3,7 +3,8 @@ export const dutch = {
     dashboard: "Dashboard",
     planning: "Planning",
     workshops: "Workshops",
-    children: "Kinderen"
+    children: "Kinderen",
+    sessions: "Opnames"
   },
   common: {
     save: "Opslaan",
@@ -48,5 +49,11 @@ export const dutch = {
       processing: "Verwerken",
       ready: "Gereed"
     }
+  },
+  sessions: {
+    title: "Opname Sessies",
+    new: "Nieuwe Sessie",
+    date: "Datum",
+    notes: "Notities"
   }
 };

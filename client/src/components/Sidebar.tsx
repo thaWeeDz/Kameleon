@@ -1,13 +1,14 @@
 import { Link, useLocation } from "wouter";
 import { dutch } from "@/lib/dutch";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Calendar, BookOpen, Users } from "lucide-react";
+import { LayoutDashboard, Calendar, BookOpen, Users, Mic } from "lucide-react";
 
 const navigation = [
   { name: dutch.navigation.dashboard, href: "/", icon: LayoutDashboard },
   { name: dutch.navigation.planning, href: "/planning", icon: Calendar },
   { name: dutch.navigation.workshops, href: "/workshops", icon: BookOpen },
   { name: dutch.navigation.children, href: "/children", icon: Users },
+  { name: dutch.navigation.sessions, href: "/sessions", icon: Mic },
 ];
 
 export default function Sidebar() {
