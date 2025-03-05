@@ -35,5 +35,18 @@ export const dutch = {
     type: "Type",
     content: "Inhoud",
     images: "Afbeeldingen"
+  },
+  recordings: {
+    new: "Nieuwe Opname",
+    start: "Start Opname",
+    stop: "Stop Opname",
+    tagMoment: "Markeer Moment",
+    audio: "Audio",
+    video: "Video",
+    status: {
+      recording: "Opnemen",
+      processing: "Verwerken",
+      ready: "Gereed"
+    }
   }
 };

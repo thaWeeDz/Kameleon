@@ -9,6 +9,7 @@ import WorkshopList from "@/pages/WorkshopList";
 import ChildrenOverview from "@/pages/ChildrenOverview";
 import ChildProfile from "@/pages/ChildProfile";
 import NotFound from "@/pages/not-found";
+import SessionView from "@/pages/SessionView"; // Added import
 
 function Router() {
   return (
@@ -21,6 +22,7 @@ function Router() {
           <Route path="/workshops" component={WorkshopList} />
           <Route path="/children" component={ChildrenOverview} />
           <Route path="/children/:id" component={ChildProfile} />
+          <Route path="/sessions/:id" component={SessionView} /> {/* Added route */}
           <Route component={NotFound} />
         </Switch>
       </main>
