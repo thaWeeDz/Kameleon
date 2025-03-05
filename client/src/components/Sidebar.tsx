@@ -28,7 +28,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
           const Icon = item.icon;
           return (
             <Link
-              key={item.href} // Added unique key based on href
+              key={item.name}
               href={item.href}
               onClick={onNavigate}
               className={cn(
