@@ -19,6 +19,8 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
   const [isRecording, setIsRecording] = useState(false);
   const [mediaType, setMediaType] = useState<'audio' | 'video'>('audio');
   const [recordingTime, setRecordingTime] = useState(0);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const mediaChunks = useRef<Blob[]>([]);
   const startTime = useRef<Date | null>(null);
@@ -34,20 +36,57 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
     return () => clearInterval(timer);
   }, [isRecording]);
 
+  // Clean up media stream when component unmounts
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [stream]);
+
+  // Update video preview when stream changes
+  useEffect(() => {
+    if (videoRef.current && stream && mediaType === 'video') {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream, mediaType]);
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const startRecording = async () => {
+  const setupMediaStream = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+
+      const newStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: mediaType === 'video'
       });
 
-      mediaRecorder.current = new MediaRecorder(stream);
+      setStream(newStream);
+      return newStream;
+    } catch (error) {
+      console.error('Error accessing media devices:', error);
+      toast({
+        title: "Toegang geweigerd",
+        description: "Geef toegang tot je microfoon/camera om op te nemen.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const mediaStream = await setupMediaStream();
+
+      mediaRecorder.current = new MediaRecorder(mediaStream);
       mediaChunks.current = [];
       startTime.current = new Date();
 
@@ -71,7 +110,6 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
             status: "ready"
           });
 
-          // Make sure we're dealing with the actual response data
           const recordingData = await response.json();
 
           queryClient.invalidateQueries({ 
@@ -97,19 +135,17 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
       setRecordingTime(0);
 
     } catch (error) {
-      console.error('Error accessing media devices:', error);
-      toast({
-        title: "Toegang geweigerd",
-        description: "Geef toegang tot je microfoon/camera om op te nemen.",
-        variant: "destructive",
-      });
+      console.error('Error starting recording:', error);
     }
   };
 
   const stopRecording = () => {
     if (mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
       mediaRecorder.current.stop();
-      mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        setStream(null);
+      }
       setIsRecording(false);
     }
   };
@@ -145,12 +181,17 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
     <div className="space-y-4 p-4 border rounded-lg">
       <div className="flex items-center justify-between">
         <Select
-          value={mediaType}
-          onValueChange={(value: 'audio' | 'video') => setMediaType(value)}
+          defaultValue={mediaType}
+          onValueChange={(value: 'audio' | 'video') => {
+            setMediaType(value);
+            if (isRecording) {
+              stopRecording();
+            }
+          }}
           disabled={isRecording}
         >
           <SelectTrigger className="w-32">
-            <SelectValue />
+            <SelectValue placeholder="Selecteer type" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="audio">
@@ -173,20 +214,38 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
         </div>
       </div>
 
+      {mediaType === 'video' && (
+        <div className="relative aspect-video bg-slate-950 rounded-lg overflow-hidden">
+          {stream ? (
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              playsInline
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-slate-500">
+              <Video className="w-12 h-12" />
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="flex gap-2">
         {!isRecording ? (
           <Button onClick={startRecording} className="flex-1">
-            {mediaType === 'video' ? <Video className="mr-2" /> : <Mic className="mr-2" />}
+            {mediaType === 'video' ? <Video className="mr-2 h-4 w-4" /> : <Mic className="mr-2 h-4 w-4" />}
             Start Opname
           </Button>
         ) : (
           <>
             <Button onClick={stopRecording} variant="destructive" className="flex-1">
-              <Square className="mr-2" />
+              <Square className="mr-2 h-4 w-4" />
               Stop Opname
             </Button>
             <Button onClick={tagMoment} variant="outline">
-              <Flag className="mr-2" />
+              <Flag className="mr-2 h-4 w-4" />
               Markeer Moment
             </Button>
           </>
