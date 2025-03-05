@@ -61,18 +61,19 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
         const blob = new Blob(mediaChunks.current, {
           type: mediaType === 'video' ? 'video/webm' : 'audio/webm'
         });
-        
-        // Here we would upload the blob to a storage service
-        // For now, we'll just create a recording entry
+
         try {
-          await apiRequest("POST", "/api/recordings", {
+          const response = await apiRequest("POST", "/api/recordings", {
             sessionId,
             startTime: startTime.current?.toISOString(),
             endTime: new Date().toISOString(),
             mediaType,
             status: "ready"
           });
-          
+
+          // Make sure we're dealing with the actual response data
+          const recordingData = await response.json();
+
           queryClient.invalidateQueries({ 
             queryKey: [`/api/sessions/${sessionId}/recordings`] 
           });
@@ -116,13 +117,13 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
   const tagMoment = async () => {
     if (!isRecording || !startTime.current) return;
 
-    const timestamp = new Date().toISOString();
-    const currentRecording = await apiRequest("GET", `/api/recordings/${sessionId}/current`);
-
     try {
+      const response = await apiRequest("GET", `/api/recordings/${sessionId}/current`);
+      const currentRecording = await response.json();
+
       await apiRequest("POST", "/api/moments", {
         recordingId: currentRecording.id,
-        timestamp,
+        timestamp: new Date().toISOString(),
         note: "Gemarkeerd tijdens opname"
       });
 
