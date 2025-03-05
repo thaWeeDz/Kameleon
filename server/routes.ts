@@ -1,5 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import { storage } from "./storage";
 import { 
   insertChildSchema, 
@@ -9,6 +12,33 @@ import {
   insertRecordingSchema,
   insertTaggedMomentSchema
 } from "@shared/schema";
+
+// Configure multer for handling file uploads
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      const uploadDir = path.join(process.cwd(), 'uploads');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+      cb(null, `${Date.now()}-${file.originalname}`);
+    }
+  }),
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = ['video/webm', 'audio/webm'];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type'));
+    }
+  },
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB max file size
+  }
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Children routes
@@ -127,6 +157,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(404).json({ message: "Opname niet gevonden" });
     }
   });
+
+  // New route for handling media file uploads
+  app.post("/api/recordings/upload", upload.single('media'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "Geen bestand ontvangen" });
+      }
+
+      const recording = await storage.createRecording({
+        sessionId: Number(req.body.sessionId),
+        startTime: req.body.startTime,
+        endTime: req.body.endTime,
+        mediaType: req.body.mediaType,
+        status: req.body.status,
+        mediaUrl: `/uploads/${req.file.filename}`
+      });
+
+      res.status(201).json(recording);
+    } catch (error) {
+      console.error('Error handling recording upload:', error);
+      res.status(500).json({ message: "Er is een fout opgetreden bij het opslaan van de opname" });
+    }
+  });
+
 
   // Tagged Moments routes
   app.get("/api/recordings/:id/moments", async (req, res) => {
