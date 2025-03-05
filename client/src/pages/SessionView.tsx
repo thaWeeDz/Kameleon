@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import RecordingInterface from "@/components/recording/RecordingInterface";
 import { type Session, type Recording } from "@shared/schema";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Mic, Video } from "lucide-react";
 
 export default function SessionView() {
   const { id } = useParams();
@@ -83,18 +83,40 @@ export default function SessionView() {
           recordings.map((recording) => (
             <Card key={recording.id}>
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">
-                      {new Date(recording.startTime).toLocaleTimeString()}
-                    </p>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {recording.mediaType === 'video' ? (
+                        <Video className="h-4 w-4" />
+                      ) : (
+                        <Mic className="h-4 w-4" />
+                      )}
+                      <p className="font-medium">
+                        {new Date(recording.startTime).toLocaleTimeString()}
+                      </p>
+                    </div>
                     <p className="text-sm text-muted-foreground">
-                      {recording.mediaType === 'video' ? 'Video' : 'Audio'} opname
+                      Status: {recording.status}
                     </p>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Status: {recording.status}
-                  </p>
+
+                  {recording.mediaUrl && (
+                    <div className="relative rounded-lg overflow-hidden bg-slate-950">
+                      {recording.mediaType === 'video' ? (
+                        <video
+                          src={recording.mediaUrl}
+                          controls
+                          className="w-full aspect-video"
+                        />
+                      ) : (
+                        <audio
+                          src={recording.mediaUrl}
+                          controls
+                          className="w-full p-4"
+                        />
+                      )}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
