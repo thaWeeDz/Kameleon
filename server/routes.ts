@@ -171,7 +171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         endTime: req.body.endTime,
         mediaType: req.body.mediaType,
         status: req.body.status,
-        mediaUrl: `/uploads/${req.file.filename}`
+        mediaUrl: `/uploads/${req.file.filename}`  // This path will be served by express.static
       });
 
       res.status(201).json(recording);
