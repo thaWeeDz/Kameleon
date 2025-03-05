@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Mic, Video, Square } from "lucide-react";
+import { Mic, Video, Square, Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 
@@ -20,11 +20,24 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
   const [mediaType, setMediaType] = useState<'audio' | 'video'>('video');
   const [recordingTime, setRecordingTime] = useState(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [recordedVideoUrl, setRecordedVideoUrl] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playbackRef = useRef<HTMLVideoElement>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const mediaChunks = useRef<Blob[]>([]);
   const startTime = useRef<Date | null>(null);
   const { toast } = useToast();
+
+  // Initialize camera on component mount
+  useEffect(() => {
+    startCamera();
+    // Cleanup on unmount
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -35,14 +48,6 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
     }
     return () => clearInterval(timer);
   }, [isRecording]);
-
-  useEffect(() => {
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, [stream]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -96,6 +101,10 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
       if (!response.ok) {
         throw new Error('Failed to upload recording');
       }
+
+      // Create a URL for immediate playback
+      const recordingUrl = URL.createObjectURL(blob);
+      setRecordedVideoUrl(recordingUrl);
 
       queryClient.invalidateQueries({ 
         queryKey: [`/api/sessions/${sessionId}/recordings`] 
@@ -169,6 +178,7 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
             if (stream) {
               stream.getTracks().forEach(track => track.stop());
               setStream(null);
+              startCamera(); // Restart camera with new settings
             }
           }}
           disabled={isRecording}
@@ -199,6 +209,7 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
         )}
       </div>
 
+      {/* Live Preview */}
       <div className="relative aspect-video bg-slate-950 rounded-lg overflow-hidden">
         <video
           ref={videoRef}
@@ -209,6 +220,7 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
         />
       </div>
 
+      {/* Recording Controls */}
       <div className="flex gap-2">
         {!isRecording ? (
           <Button onClick={startRecording} className="flex-1">
@@ -222,6 +234,21 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
           </Button>
         )}
       </div>
+
+      {/* Playback Section */}
+      {recordedVideoUrl && (
+        <div className="space-y-2">
+          <h3 className="text-lg font-medium">Laatste Opname</h3>
+          <div className="relative aspect-video bg-slate-950 rounded-lg overflow-hidden">
+            <video
+              ref={playbackRef}
+              src={recordedVideoUrl}
+              controls
+              className="w-full h-full"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
