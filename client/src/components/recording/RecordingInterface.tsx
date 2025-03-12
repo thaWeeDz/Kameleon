@@ -190,6 +190,13 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
     }
   };
 
+  const jumpToTag = (timestamp: number) => {
+    if (playbackRef.current) {
+      playbackRef.current.currentTime = timestamp;
+      playbackRef.current.play();
+    }
+  };
+
   return (
     <div className="space-y-4 p-4 border rounded-lg">
       <div className="flex items-center justify-between">
@@ -271,9 +278,14 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
             <h4 className="text-sm font-medium text-muted-foreground mb-2">Tags:</h4>
             <div className="flex flex-wrap gap-2">
               {tags.map(tag => (
-                <div key={tag.id} className="text-sm bg-secondary px-2 py-1 rounded-md">
+                <button
+                  key={tag.id}
+                  onClick={() => jumpToTag(tag.timestamp)}
+                  className="text-sm bg-secondary hover:bg-secondary/80 px-2 py-1 rounded-md transition-colors duration-200 flex items-center gap-2"
+                >
+                  <Flag className="h-3 w-3" />
                   {formatTime(tag.timestamp)}
-                </div>
+                </button>
               ))}
             </div>
           </div>
