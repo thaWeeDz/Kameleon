@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import RecordingInterface from "@/components/recording/RecordingInterface";
 import { type Session, type Recording } from "@shared/schema";
-import { AlertCircle, Mic, Video, Plus } from "lucide-react";
+import { AlertCircle, Mic, Video, Plus, Flag, ArrowLeft } from "lucide-react";
 
 export default function SessionView() {
   const { id } = useParams();
@@ -56,18 +56,17 @@ export default function SessionView() {
     );
   }
 
-  return (
-    <div className="space-y-8">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Sessie Opname</h1>
-          <p className="text-muted-foreground">
-            {new Date(session.date).toLocaleDateString()}
-          </p>
-        </div>
-      </div>
-
-      {showRecording ? (
+  if (showRecording) {
+    return (
+      <div className="space-y-4">
+        <Button 
+          variant="ghost" 
+          onClick={() => setShowRecording(false)}
+          className="mb-4"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Terug naar opnames
+        </Button>
         <Card>
           <CardHeader>
             <CardTitle>Nieuwe Opname</CardTitle>
@@ -79,15 +78,28 @@ export default function SessionView() {
             />
           </CardContent>
         </Card>
-      ) : (
-        <Button 
-          onClick={() => setShowRecording(true)}
-          className="w-full"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Start Nieuwe Opname
-        </Button>
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Sessie Opname</h1>
+          <p className="text-muted-foreground">
+            {new Date(session.date).toLocaleDateString()}
+          </p>
+        </div>
+      </div>
+
+      <Button 
+        onClick={() => setShowRecording(true)}
+        className="w-full"
+      >
+        <Plus className="mr-2 h-4 w-4" />
+        Start Nieuwe Opname
+      </Button>
 
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">Opnames</h2>
@@ -116,16 +128,42 @@ export default function SessionView() {
                     </p>
                   </div>
 
+                  {recording.tags && recording.tags.length > 0 && (
+                    <div className="mt-2">
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">Tags:</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {recording.tags.map(tag => (
+                          <button
+                            key={tag.id}
+                            onClick={() => {
+                              const videoElement = document.querySelector(`#video-${recording.id}`) as HTMLVideoElement;
+                              if (videoElement) {
+                                videoElement.currentTime = tag.timestamp;
+                                videoElement.play();
+                              }
+                            }}
+                            className="text-sm bg-secondary hover:bg-secondary/80 px-2 py-1 rounded-md transition-colors duration-200 flex items-center gap-2"
+                          >
+                            <Flag className="h-3 w-3" />
+                            {new Date(tag.timestamp * 1000).toISOString().substr(11, 8)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {recording.mediaUrl && (
                     <div className="relative rounded-lg overflow-hidden bg-slate-950">
                       {recording.mediaType === 'video' ? (
                         <video
+                          id={`video-${recording.id}`}
                           src={recording.mediaUrl}
                           controls
                           className="w-full aspect-video"
                         />
                       ) : (
                         <audio
+                          id={`audio-${recording.id}`}
                           src={recording.mediaUrl}
                           controls
                           className="w-full p-4"
