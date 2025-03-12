@@ -75,6 +75,9 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
     };
   }, []);
 
+  // Reference to the tag button for focusing
+  const tagButtonRef = useRef<HTMLButtonElement>(null);
+
   // Handle spacebar keypress for tagging
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -82,6 +85,11 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
       if (e.key === ' ' && isRecording) {
         e.preventDefault(); // Prevent any default spacebar actions
         addTag();
+        
+        // Focus the tag button to prevent focus on the stop button
+        if (tagButtonRef.current) {
+          tagButtonRef.current.focus();
+        }
       }
     };
 
@@ -323,7 +331,11 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
               <Square className="mr-2 h-4 w-4" />
               Stop Opname
             </Button>
-            <Button onClick={addTag} variant="secondary">
+            <Button 
+              ref={tagButtonRef}
+              onClick={addTag} 
+              variant="secondary"
+            >
               <Flag className="mr-2 h-4 w-4" />
               Tag Moment
             </Button>
