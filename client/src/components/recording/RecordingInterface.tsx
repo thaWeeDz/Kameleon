@@ -78,16 +78,41 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
   // Reference to the tag button for focusing
   const tagButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Handle keyboard shortcuts for tagging
+  // Handle keyboard shortcuts for tagging with enhanced logging
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Support multiple keys for tagging: VolumeUp, ArrowUp, PageUp
+      // Log all key events during recording for debugging
+      if (isRecording) {
+        console.log('Key pressed:', {
+          key: e.key,
+          code: e.code,
+          keyCode: e.keyCode,
+          which: e.which,
+          location: e.location,
+          repeat: e.repeat,
+          ctrlKey: e.ctrlKey,
+          altKey: e.altKey,
+          shiftKey: e.shiftKey,
+          metaKey: e.metaKey
+        });
+      }
+      
+      // Support multiple keys for tagging including Bluetooth devices
       if (isRecording && (
+          // Standard keys
           e.code === 'AudioVolumeUp' || 
+          e.key === 'VolumeUp' ||
+          e.key === 'ArrowUp' ||
           e.code === 'ArrowUp' || 
-          e.code === 'PageUp'
+          e.code === 'PageUp' ||
+          // Bluetooth and mobile remote keys
+          e.keyCode === 175 ||     // VolumeUp
+          e.which === 175 ||       // VolumeUp in some browsers
+          e.keyCode === 38 ||      // ArrowUp
+          e.which === 38           // ArrowUp in some browsers
         )) {
         e.preventDefault();
+        console.log('Tag key detected! Adding tag at time:', recordingTime);
         addTag();
         
         // Focus the tag button
@@ -101,7 +126,7 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isRecording, addTag]); // Re-add listener when recording state or addTag changes
+  }, [isRecording, addTag, recordingTime]); // Re-add listener when recording state or addTag changes
 
   // Update recording timer
   useEffect(() => {
