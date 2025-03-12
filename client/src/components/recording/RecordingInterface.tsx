@@ -34,7 +34,14 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const mediaChunks = useRef<Blob[]>([]);
   const startTime = useRef<Date | null>(null);
+  const currentTagsRef = useRef<Tag[]>([]);
   const { toast } = useToast();
+  
+  // Keep track of the current tags
+  useEffect(() => {
+    currentTagsRef.current = tags;
+    console.log('Updated tags ref:', currentTagsRef.current);
+  }, [tags]);
 
   // Initialize camera on component mount
   useEffect(() => {
@@ -120,9 +127,9 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
       formData.append('mediaType', mediaType);
       formData.append('status', 'completed');
       
-      // Stringify tags and log for debugging
-      console.log('Tags being sent to server:', tags);
-      const tagsJSON = JSON.stringify(tags);
+      // Use the currentTagsRef to get the latest tags
+      console.log('Tags being sent to server (from ref):', currentTagsRef.current);
+      const tagsJSON = JSON.stringify(currentTagsRef.current);
       console.log('Tags JSON:', tagsJSON);
       formData.append('tags', tagsJSON);
 
@@ -138,11 +145,11 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
 
       const recordingUrl = URL.createObjectURL(blob);
       
-      // Save the latest recording info
+      // Save the latest recording info, using tags from our ref
       setLatestRecording({
         url: recordingUrl,
         type: mediaType,
-        tags: [...tags] // Create a copy of the tags array
+        tags: [...currentTagsRef.current] // Create a copy of the tags array from our ref
       });
       
       // Show the latest recording
@@ -178,7 +185,10 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
       mediaRecorder.current = new MediaRecorder(stream!);
       mediaChunks.current = [];
       startTime.current = new Date();
-      setTags([]); // Reset tags when starting new recording
+      
+      // Clear tags at the start of a new recording
+      setTags([]);
+      console.log('Tags reset at start of recording');
 
       mediaRecorder.current.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -187,9 +197,12 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
       };
 
       mediaRecorder.current.onstop = async () => {
+        console.log('Recording stopped, tags at stop time:', currentTagsRef.current);
+        
         const blob = new Blob(mediaChunks.current, {
           type: mediaType === 'video' ? 'video/webm' : 'audio/webm'
         });
+        
         await saveRecording(blob);
       };
 
