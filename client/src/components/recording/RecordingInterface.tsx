@@ -15,6 +15,7 @@ interface Tag {
   id: string;
   timestamp: number;
   created_at: string;
+  screenshot?: string; // Base64 encoded image data
 }
 
 interface RecordingInterfaceProps {
@@ -42,21 +43,62 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
   
+  // Capture screenshot from video
+  const captureScreenshot = (): Promise<string | undefined> => {
+    return new Promise((resolve) => {
+      if (mediaType !== 'video' || !videoRef.current) {
+        resolve(undefined);
+        return;
+      }
+
+      try {
+        // Create a canvas element
+        const canvas = document.createElement('canvas');
+        const video = videoRef.current;
+        
+        // Set canvas dimensions to match the video
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        // Draw the current video frame to the canvas
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          
+          // Convert canvas to base64 data URL (JPEG format for smaller size)
+          const dataURL = canvas.toDataURL('image/jpeg', 0.7); // 70% quality
+          console.log('Screenshot captured successfully');
+          resolve(dataURL);
+        } else {
+          console.error('Failed to get canvas context');
+          resolve(undefined);
+        }
+      } catch (err) {
+        console.error('Error capturing screenshot:', err);
+        resolve(undefined);
+      }
+    });
+  };
+
   // Create a stable addTag function with useCallback
-  const addTag = useCallback(() => {
+  const addTag = useCallback(async () => {
+    // Capture screenshot first if it's a video recording
+    const screenshot = await captureScreenshot();
+    
     const newTag: Tag = {
       id: crypto.randomUUID(),
       timestamp: recordingTime,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      screenshot: screenshot
     };
     
     // Add tag to state
     const updatedTags = [...tags, newTag];
     setTags(updatedTags);
     
-    console.log('Tag added:', newTag);
+    console.log('Tag added with screenshot:', newTag);
     console.log('Current tags:', updatedTags);
-  }, [recordingTime, tags]);
+  }, [recordingTime, tags, mediaType]);
   
   // Keep track of the current tags
   useEffect(() => {
@@ -80,7 +122,7 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
 
   // Handle keyboard shortcuts for tagging with enhanced logging
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
       // Log all key events during recording for debugging
       if (isRecording) {
         console.log('Key pressed:', {
@@ -113,7 +155,9 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
         )) {
         e.preventDefault();
         console.log('Tag key detected! Adding tag at time:', recordingTime);
-        addTag();
+        
+        // Since addTag is now async, we need to await it
+        await addTag();
         
         // Focus the tag button
         if (tagButtonRef.current) {
@@ -367,7 +411,7 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
             </Button>
             <Button 
               ref={tagButtonRef}
-              onClick={addTag} 
+              onClick={() => addTag()} 
               variant="secondary"
             >
               <Flag className="mr-2 h-4 w-4" />

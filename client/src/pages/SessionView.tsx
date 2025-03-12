@@ -20,6 +20,7 @@ interface Tag {
   id: string;
   timestamp: number;
   created_at: string;
+  screenshot?: string; // Base64 encoded image
 }
 
 export default function SessionView() {
@@ -155,22 +156,61 @@ export default function SessionView() {
                   {recording.tags && Array.isArray(recording.tags) && recording.tags.length > 0 && (
                     <div className="mt-2">
                       <h4 className="text-sm font-medium text-muted-foreground mb-2">Tags:</h4>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                         {recording.tags.map((tag: Tag) => (
-                          <button
-                            key={tag.id}
-                            onClick={() => {
-                              const videoElement = document.querySelector(`#video-${recording.id}`) as HTMLVideoElement;
-                              if (videoElement) {
-                                videoElement.currentTime = tag.timestamp;
-                                videoElement.play();
-                              }
-                            }}
-                            className="text-sm bg-secondary hover:bg-secondary/80 px-2 py-1 rounded-md transition-colors duration-200 flex items-center gap-2"
-                          >
-                            <Flag className="h-3 w-3" />
-                            {formatTimestamp(tag.timestamp)}
-                          </button>
+                          <div key={tag.id} className="flex flex-col gap-1 items-center">
+                            {/* Display screenshot thumbnail if available */}
+                            {tag.screenshot && recording.mediaType === 'video' ? (
+                              <div 
+                                className="w-full aspect-video rounded overflow-hidden border border-border cursor-pointer hover:border-primary transition-colors" 
+                                onClick={() => {
+                                  const videoElement = document.querySelector(`#video-${recording.id}`) as HTMLVideoElement;
+                                  if (videoElement) {
+                                    videoElement.currentTime = tag.timestamp;
+                                    videoElement.play();
+                                  }
+                                }}
+                              >
+                                <img 
+                                  src={tag.screenshot} 
+                                  alt={`Screenshot at ${formatTimestamp(tag.timestamp)}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <div 
+                                className="w-full aspect-video bg-slate-100 flex items-center justify-center rounded border border-border cursor-pointer hover:border-primary transition-colors"
+                                onClick={() => {
+                                  const mediaElement = document.querySelector(`#${recording.mediaType}-${recording.id}`) as HTMLMediaElement;
+                                  if (mediaElement) {
+                                    mediaElement.currentTime = tag.timestamp;
+                                    mediaElement.play();
+                                  }
+                                }}
+                              >
+                                {recording.mediaType === 'video' ? (
+                                  <Video className="h-8 w-8 text-slate-400" />
+                                ) : (
+                                  <Mic className="h-8 w-8 text-slate-400" />
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* Tag timestamp button */}
+                            <button
+                              onClick={() => {
+                                const mediaElement = document.querySelector(`#${recording.mediaType}-${recording.id}`) as HTMLMediaElement;
+                                if (mediaElement) {
+                                  mediaElement.currentTime = tag.timestamp;
+                                  mediaElement.play();
+                                }
+                              }}
+                              className="text-xs bg-secondary hover:bg-secondary/80 px-2 py-1 rounded-md transition-colors duration-200 flex items-center gap-1"
+                            >
+                              <Flag className="h-3 w-3" />
+                              {formatTimestamp(tag.timestamp)}
+                            </button>
+                          </div>
                         ))}
                       </div>
                     </div>
