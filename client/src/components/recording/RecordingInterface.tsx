@@ -69,7 +69,14 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
       timestamp: recordingTime,
       created_at: new Date().toISOString()
     };
-    setTags(prevTags => [...prevTags, newTag]);
+    
+    // Add tag to state
+    const updatedTags = [...tags, newTag];
+    setTags(updatedTags);
+    
+    console.log('Tag added:', newTag);
+    console.log('Current tags:', updatedTags);
+    
     toast({
       title: "Moment getagd",
       description: `Tijdstip ${formatTime(recordingTime)} gemarkeerd`,
@@ -112,7 +119,12 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
       formData.append('endTime', new Date().toISOString());
       formData.append('mediaType', mediaType);
       formData.append('status', 'completed');
-      formData.append('tags', JSON.stringify(tags));
+      
+      // Stringify tags and log for debugging
+      console.log('Tags being sent to server:', tags);
+      const tagsJSON = JSON.stringify(tags);
+      console.log('Tags JSON:', tagsJSON);
+      formData.append('tags', tagsJSON);
 
       // Send the FormData to the server
       const response = await fetch('/api/recordings/upload', {
