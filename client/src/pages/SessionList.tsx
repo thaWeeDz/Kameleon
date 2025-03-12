@@ -13,9 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { type Session, insertSessionSchema } from "@shared/schema";
+import { type Session, type Recording, insertSessionSchema } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Plus, Mic } from "lucide-react";
+import { Plus, Mic, Video, Flag } from "lucide-react";
 import { dutch } from "@/lib/dutch";
 import {
   Form,
@@ -25,6 +25,81 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+
+// Helper function to format timestamp for display
+const formatTimestamp = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
+// Define a type for tags
+interface Tag {
+  id: string;
+  timestamp: number;
+  created_at: string;
+}
+
+// Define an extended type for Recording with tags
+type RecordingWithTags = Recording & { tags?: Tag[] };
+
+// Component to show recordings and their tags for each session
+interface SessionRecordingsProps {
+  sessionId: number;
+}
+
+function SessionRecordings({ sessionId }: SessionRecordingsProps) {
+  const { data: recordings = [], isLoading } = useQuery<RecordingWithTags[]>({
+    queryKey: [`/api/sessions/${sessionId}/recordings`],
+    enabled: !!sessionId
+  });
+
+  if (isLoading) {
+    return <div className="text-sm text-muted-foreground">{dutch.common.loading}</div>;
+  }
+
+  if (recordings.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-4 space-y-2">
+      <h4 className="text-sm font-medium">Opnames:</h4>
+      {recordings.map(recording => (
+        <div key={recording.id} className="bg-muted/40 p-2 rounded-md">
+          <div className="flex items-center gap-2">
+            {recording.mediaType === 'video' ? (
+              <Video className="h-3 w-3" />
+            ) : (
+              <Mic className="h-3 w-3" />
+            )}
+            <span className="text-xs">
+              {new Date(recording.startTime).toLocaleTimeString()}
+            </span>
+          </div>
+          
+          {/* Display tags if available */}
+          {recording.tags && Array.isArray(recording.tags) && recording.tags.length > 0 && (
+            <div className="mt-2">
+              <h5 className="text-xs font-medium mb-1">Tags:</h5>
+              <div className="flex flex-wrap gap-1">
+                {recording.tags.map((tag: Tag) => (
+                  <span 
+                    key={tag.id} 
+                    className="text-xs bg-secondary/60 px-1.5 py-0.5 rounded flex items-center gap-1"
+                  >
+                    <Flag className="h-2 w-2" />
+                    {formatTimestamp(tag.timestamp)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function SessionList() {
   const [open, setOpen] = useState(false);
@@ -119,6 +194,10 @@ export default function SessionList() {
                 <p className="text-sm text-muted-foreground">
                   {session.notes || "Geen notities"}
                 </p>
+                
+                {/* Display recordings with tags */}
+                <SessionRecordings sessionId={session.id} />
+                
                 <Button variant="link" className="mt-4">
                   <Mic className="mr-2 h-4 w-4" />
                   Start Opname
