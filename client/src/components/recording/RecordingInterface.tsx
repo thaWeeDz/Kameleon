@@ -28,8 +28,6 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
   const [recordingTime, setRecordingTime] = useState(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
-  const [latestRecording, setLatestRecording] = useState<{url: string, type: 'audio' | 'video', tags: Tag[]} | null>(null);
-  const [showLatestRecording, setShowLatestRecording] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const mediaChunks = useRef<Blob[]>([]);
@@ -143,31 +141,18 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
         throw new Error('Failed to upload recording');
       }
 
+      // Immediately return to the recording list
       const recordingUrl = URL.createObjectURL(blob);
-      
-      // Save the latest recording info, using tags from our ref
-      setLatestRecording({
-        url: recordingUrl,
-        type: mediaType,
-        tags: [...currentTagsRef.current] // Create a copy of the tags array from our ref
-      });
-      
-      // Show the latest recording
-      setShowLatestRecording(true);
-      
-      // Set a timeout to automatically return to the overview after 3 seconds
-      setTimeout(() => {
-        onRecordingComplete(recordingUrl);
-        setShowLatestRecording(false);
-      }, 3000);
+      onRecordingComplete(recordingUrl);
 
+      // Invalidate queries to refresh the recordings list
       queryClient.invalidateQueries({ 
         queryKey: [`/api/sessions/${sessionId}/recordings`] 
       });
 
       toast({
         title: "Opname voltooid",
-        description: "De opname is succesvol opgeslagen. Je wordt automatisch teruggestuurd naar het overzicht.",
+        description: "De opname is succesvol opgeslagen.",
       });
     } catch (error) {
       console.error('Error saving recording:', error);
@@ -287,23 +272,26 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
         {isRecording && (
           <div className="bg-slate-100 p-2 rounded-lg">
             <h4 className="text-sm font-medium mb-1">Getagde momenten:</h4>
-            {tags.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {tags.map(tag => (
-                  <div 
-                    key={tag.id}
-                    className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center"
-                  >
-                    <Flag className="h-3 w-3 mr-1" />
-                    {formatTime(tag.timestamp)}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-muted-foreground text-sm italic">
-                Nog geen momenten getagd. Klik op "Tag Moment" om een moment te markeren.
-              </div>
-            )}
+            <div className="flex flex-wrap gap-2">
+              {tags.length > 0 ? (
+                <>
+                  {tags.map(tag => (
+                    <div 
+                      key={tag.id}
+                      className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center"
+                    >
+                      <Flag className="h-3 w-3 mr-1" />
+                      {formatTime(tag.timestamp)}
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <div className="bg-slate-200 text-slate-400 px-3 py-1 rounded-full text-sm flex items-center">
+                  <Flag className="h-3 w-3 mr-1" />
+                  00:00
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -328,58 +316,6 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
           </>
         )}
       </div>
-      
-      {/* Latest Recording */}
-      {showLatestRecording && latestRecording && (
-        <div className="mt-8 border-t pt-4">
-          <h3 className="font-medium text-lg mb-2">Laatste opname</h3>
-          {latestRecording.type === 'video' ? (
-            <div className="aspect-video bg-slate-950 rounded-lg overflow-hidden mb-2">
-              <video 
-                src={latestRecording.url}
-                controls 
-                className="w-full h-full"
-              />
-            </div>
-          ) : (
-            <div className="bg-slate-100 p-4 rounded-lg mb-2">
-              <audio src={latestRecording.url} controls className="w-full" />
-            </div>
-          )}
-          
-          {/* Tags */}
-          {latestRecording.tags.length > 0 ? (
-            <div className="space-y-2">
-              <h4 className="font-medium">Getagde momenten:</h4>
-              <div className="flex flex-wrap gap-2">
-                {latestRecording.tags.map(tag => (
-                  <div 
-                    key={tag.id}
-                    className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center"
-                  >
-                    <Flag className="h-3 w-3 mr-1" />
-                    {formatTime(tag.timestamp)}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-sm">Geen momenten getagd</p>
-          )}
-          
-          <div className="mt-4">
-            <Button 
-              onClick={() => {
-                onRecordingComplete(latestRecording.url);
-                setShowLatestRecording(false);
-              }}
-              variant="secondary"
-            >
-              Terug naar overzicht
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
