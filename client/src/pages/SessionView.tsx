@@ -89,7 +89,10 @@ export default function SessionView() {
           <CardContent>
             <RecordingInterface 
               sessionId={sessionId} 
-              onRecordingComplete={() => setShowRecording(false)} 
+              onRecordingComplete={() => {
+                // This will be called when the user clicks "Terug naar overzicht"
+                setShowRecording(false);
+              }} 
             />
           </CardContent>
         </Card>

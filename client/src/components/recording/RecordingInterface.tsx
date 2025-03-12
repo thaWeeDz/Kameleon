@@ -28,6 +28,8 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
   const [recordingTime, setRecordingTime] = useState(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [latestRecording, setLatestRecording] = useState<{url: string, type: 'audio' | 'video', tags: Tag[]} | null>(null);
+  const [showLatestRecording, setShowLatestRecording] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const mediaChunks = useRef<Blob[]>([]);
@@ -122,8 +124,20 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
         throw new Error('Failed to upload recording');
       }
 
-      const recordingUrl = URL.createObjectURL(blob); //Added to pass to callback
-      onRecordingComplete(recordingUrl); // Call the callback
+      const recordingUrl = URL.createObjectURL(blob);
+      
+      // Save the latest recording info
+      setLatestRecording({
+        url: recordingUrl,
+        type: mediaType,
+        tags: [...tags] // Create a copy of the tags array
+      });
+      
+      // Show the latest recording
+      setShowLatestRecording(true);
+      
+      // We don't immediately redirect but wait for user to view the recording
+      // onRecordingComplete(recordingUrl);
 
       queryClient.invalidateQueries({ 
         queryKey: [`/api/sessions/${sessionId}/recordings`] 
@@ -260,6 +274,58 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
           </>
         )}
       </div>
+      
+      {/* Latest Recording */}
+      {showLatestRecording && latestRecording && (
+        <div className="mt-8 border-t pt-4">
+          <h3 className="font-medium text-lg mb-2">Laatste opname</h3>
+          {latestRecording.type === 'video' ? (
+            <div className="aspect-video bg-slate-950 rounded-lg overflow-hidden mb-2">
+              <video 
+                src={latestRecording.url}
+                controls 
+                className="w-full h-full"
+              />
+            </div>
+          ) : (
+            <div className="bg-slate-100 p-4 rounded-lg mb-2">
+              <audio src={latestRecording.url} controls className="w-full" />
+            </div>
+          )}
+          
+          {/* Tags */}
+          {latestRecording.tags.length > 0 ? (
+            <div className="space-y-2">
+              <h4 className="font-medium">Getagde momenten:</h4>
+              <div className="flex flex-wrap gap-2">
+                {latestRecording.tags.map(tag => (
+                  <div 
+                    key={tag.id}
+                    className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center"
+                  >
+                    <Flag className="h-3 w-3 mr-1" />
+                    {formatTime(tag.timestamp)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-sm">Geen momenten getagd</p>
+          )}
+          
+          <div className="mt-4">
+            <Button 
+              onClick={() => {
+                onRecordingComplete(latestRecording.url);
+                setShowLatestRecording(false);
+              }}
+              variant="secondary"
+            >
+              Terug naar overzicht
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
