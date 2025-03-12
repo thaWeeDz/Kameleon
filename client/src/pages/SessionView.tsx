@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import RecordingInterface from "@/components/recording/RecordingInterface";
 import { type Session, type Recording } from "@shared/schema";
+// Define an extended type for Recording with tags as any type to work with JSON data
+type RecordingWithTags = Recording & { tags?: any[] };
 import { AlertCircle, Mic, Video, Plus, Flag, ArrowLeft } from "lucide-react";
 
 // Helper function to format timestamp for display
@@ -30,7 +32,7 @@ export default function SessionView() {
     retry: 1
   });
 
-  const { data: recordings = [], isLoading: isRecordingsLoading } = useQuery<Recording[]>({ 
+  const { data: recordings = [], isLoading: isRecordingsLoading } = useQuery<RecordingWithTags[]>({ 
     queryKey: [`/api/sessions/${sessionId}/recordings`],
     enabled: !!session // Only fetch recordings if we have a session
   });
@@ -141,11 +143,12 @@ export default function SessionView() {
                     </p>
                   </div>
 
-                  {recording.tags && Array.isArray(recording.tags) && (recording.tags as Tag[]).length > 0 && (
+                  {/* Display tags if available */}
+                  {recording.tags && Array.isArray(recording.tags) && recording.tags.length > 0 && (
                     <div className="mt-2">
                       <h4 className="text-sm font-medium text-muted-foreground mb-2">Tags:</h4>
                       <div className="flex flex-wrap gap-2">
-                        {(recording.tags as Tag[]).map(tag => (
+                        {recording.tags.map((tag: Tag) => (
                           <button
                             key={tag.id}
                             onClick={() => {
