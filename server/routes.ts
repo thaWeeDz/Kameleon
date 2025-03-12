@@ -165,13 +165,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Geen bestand ontvangen" });
       }
 
+      // Parse tags from the form data if present
+      let tags = [];
+      if (req.body.tags) {
+        try {
+          tags = JSON.parse(req.body.tags);
+          console.log('Parsed tags:', tags);
+        } catch (e) {
+          console.error('Error parsing tags:', e);
+        }
+      }
+
       const recording = await storage.createRecording({
         sessionId: Number(req.body.sessionId),
         startTime: req.body.startTime,
         endTime: req.body.endTime,
         mediaType: req.body.mediaType,
         status: req.body.status,
-        mediaUrl: `/uploads/${req.file.filename}`  // This path will be served by express.static
+        mediaUrl: `/uploads/${req.file.filename}`,  // This path will be served by express.static
+        tags: tags // Include the tags in the recording
       });
 
       res.status(201).json(recording);

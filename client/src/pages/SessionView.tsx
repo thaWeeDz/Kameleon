@@ -7,6 +7,13 @@ import RecordingInterface from "@/components/recording/RecordingInterface";
 import { type Session, type Recording } from "@shared/schema";
 import { AlertCircle, Mic, Video, Plus, Flag, ArrowLeft } from "lucide-react";
 
+// Helper function to format timestamp for display
+const formatTimestamp = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
 interface Tag {
   id: string;
   timestamp: number;
@@ -134,7 +141,7 @@ export default function SessionView() {
                     </p>
                   </div>
 
-                  {recording.tags && Array.isArray(recording.tags) && recording.tags.length > 0 && (
+                  {recording.tags && Array.isArray(recording.tags) && (recording.tags as Tag[]).length > 0 && (
                     <div className="mt-2">
                       <h4 className="text-sm font-medium text-muted-foreground mb-2">Tags:</h4>
                       <div className="flex flex-wrap gap-2">
@@ -151,7 +158,7 @@ export default function SessionView() {
                             className="text-sm bg-secondary hover:bg-secondary/80 px-2 py-1 rounded-md transition-colors duration-200 flex items-center gap-2"
                           >
                             <Flag className="h-3 w-3" />
-                            {new Date(tag.timestamp * 1000).toISOString().substr(11, 8)}
+                            {formatTimestamp(tag.timestamp)}
                           </button>
                         ))}
                       </div>
