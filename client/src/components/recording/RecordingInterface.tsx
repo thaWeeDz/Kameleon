@@ -7,9 +7,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Mic, Video, Square, Play } from "lucide-react";
+import { Mic, Video, Square, Play, Flag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+
+interface Tag {
+  id: string;
+  timestamp: number;
+  created_at: string;
+}
 
 interface RecordingInterfaceProps {
   sessionId: number;
@@ -21,6 +27,7 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
   const [recordingTime, setRecordingTime] = useState(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [recordedVideoUrl, setRecordedVideoUrl] = useState<string | null>(null);
+  const [tags, setTags] = useState<Tag[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const playbackRef = useRef<HTMLVideoElement>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
@@ -53,6 +60,19 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const addTag = () => {
+    const newTag: Tag = {
+      id: crypto.randomUUID(),
+      timestamp: recordingTime,
+      created_at: new Date().toISOString()
+    };
+    setTags(prevTags => [...prevTags, newTag]);
+    toast({
+      title: "Moment getagd",
+      description: `Tijdstip ${formatTime(recordingTime)} gemarkeerd`,
+    });
   };
 
   const startCamera = async () => {
@@ -91,6 +111,7 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
       formData.append('endTime', new Date().toISOString());
       formData.append('mediaType', mediaType);
       formData.append('status', 'completed');
+      formData.append('tags', JSON.stringify(tags));
 
       // Send the FormData to the server
       const response = await fetch('/api/recordings/upload', {
@@ -133,6 +154,7 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
       mediaRecorder.current = new MediaRecorder(stream!);
       mediaChunks.current = [];
       startTime.current = new Date();
+      setTags([]); // Reset tags when starting new recording
 
       mediaRecorder.current.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -228,10 +250,16 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
             Start Opname
           </Button>
         ) : (
-          <Button onClick={stopRecording} variant="destructive" className="flex-1">
-            <Square className="mr-2 h-4 w-4" />
-            Stop Opname
-          </Button>
+          <>
+            <Button onClick={stopRecording} variant="destructive" className="flex-1">
+              <Square className="mr-2 h-4 w-4" />
+              Stop Opname
+            </Button>
+            <Button onClick={addTag} variant="secondary">
+              <Flag className="mr-2 h-4 w-4" />
+              Tag Moment
+            </Button>
+          </>
         )}
       </div>
 
@@ -239,6 +267,16 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
       {recordedVideoUrl && (
         <div className="space-y-2">
           <h3 className="text-lg font-medium">Laatste Opname</h3>
+          <div className="mt-2">
+            <h4 className="text-sm font-medium text-muted-foreground mb-2">Tags:</h4>
+            <div className="flex flex-wrap gap-2">
+              {tags.map(tag => (
+                <div key={tag.id} className="text-sm bg-secondary px-2 py-1 rounded-md">
+                  {formatTime(tag.timestamp)}
+                </div>
+              ))}
+            </div>
+          </div>
           <div className="relative aspect-video bg-slate-950 rounded-lg overflow-hidden">
             <video
               ref={playbackRef}
