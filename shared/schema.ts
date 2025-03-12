@@ -30,7 +30,7 @@ export const sessions = pgTable("sessions", {
   audioUrl: text("audio_url"),
 });
 
-// New tables for recordings feature
+// Updated recordings table with tags
 export const recordings = pgTable("recordings", {
   id: serial("id").primaryKey(),
   sessionId: integer("session_id").notNull(),
@@ -40,6 +40,7 @@ export const recordings = pgTable("recordings", {
   mediaUrl: text("media_url"),
   transcription: text("transcription"),
   status: text("status").notNull().default("recording"), // recording, processing, ready
+  tags: json("tags").default([]).notNull(), // Add tags as a JSON field
 });
 
 export const taggedMoments = pgTable("tagged_moments", {
