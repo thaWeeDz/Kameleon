@@ -73,7 +73,10 @@ export default function SessionView() {
             <CardTitle>Nieuwe Opname</CardTitle>
           </CardHeader>
           <CardContent>
-            <RecordingInterface sessionId={sessionId} />
+            <RecordingInterface 
+              sessionId={sessionId} 
+              onRecordingComplete={() => setShowRecording(false)} 
+            />
           </CardContent>
         </Card>
       ) : (
