@@ -7,6 +7,12 @@ import RecordingInterface from "@/components/recording/RecordingInterface";
 import { type Session, type Recording } from "@shared/schema";
 import { AlertCircle, Mic, Video, Plus, Flag, ArrowLeft } from "lucide-react";
 
+interface Tag {
+  id: string;
+  timestamp: number;
+  created_at: string;
+}
+
 export default function SessionView() {
   const { id } = useParams();
   const sessionId = Number(id);
@@ -128,11 +134,11 @@ export default function SessionView() {
                     </p>
                   </div>
 
-                  {recording.tags && recording.tags.length > 0 && (
+                  {recording.tags && Array.isArray(recording.tags) && recording.tags.length > 0 && (
                     <div className="mt-2">
                       <h4 className="text-sm font-medium text-muted-foreground mb-2">Tags:</h4>
                       <div className="flex flex-wrap gap-2">
-                        {recording.tags.map(tag => (
+                        {(recording.tags as Tag[]).map(tag => (
                           <button
                             key={tag.id}
                             onClick={() => {
