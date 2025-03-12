@@ -155,8 +155,11 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
       // Show the latest recording
       setShowLatestRecording(true);
       
-      // We don't immediately redirect but wait for user to view the recording
-      // onRecordingComplete(recordingUrl);
+      // Set a timeout to automatically return to the overview after 3 seconds
+      setTimeout(() => {
+        onRecordingComplete(recordingUrl);
+        setShowLatestRecording(false);
+      }, 3000);
 
       queryClient.invalidateQueries({ 
         queryKey: [`/api/sessions/${sessionId}/recordings`] 
@@ -164,7 +167,7 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
 
       toast({
         title: "Opname voltooid",
-        description: "De opname is succesvol opgeslagen.",
+        description: "De opname is succesvol opgeslagen. Je wordt automatisch teruggestuurd naar het overzicht.",
       });
     } catch (error) {
       console.error('Error saving recording:', error);
@@ -269,14 +272,34 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
       </div>
 
       {/* Live Preview */}
-      <div className="relative aspect-video bg-slate-950 rounded-lg overflow-hidden">
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className="w-full h-full object-cover"
-        />
+      <div className="space-y-2">
+        <div className="relative aspect-video bg-slate-950 rounded-lg overflow-hidden">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full object-cover"
+          />
+        </div>
+        
+        {/* Live Tag Markers */}
+        {isRecording && tags.length > 0 && (
+          <div className="bg-slate-100 p-2 rounded-lg">
+            <h4 className="text-sm font-medium mb-1">Getagde momenten:</h4>
+            <div className="flex flex-wrap gap-2">
+              {tags.map(tag => (
+                <div 
+                  key={tag.id}
+                  className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center"
+                >
+                  <Flag className="h-3 w-3 mr-1" />
+                  {formatTime(tag.timestamp)}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Recording Controls */}

@@ -32,9 +32,14 @@ export default function SessionView() {
     retry: 1
   });
 
-  const { data: recordings = [], isLoading: isRecordingsLoading } = useQuery<RecordingWithTags[]>({ 
+  const { data: recordingsRaw = [], isLoading: isRecordingsLoading } = useQuery<RecordingWithTags[]>({ 
     queryKey: [`/api/sessions/${sessionId}/recordings`],
     enabled: !!session // Only fetch recordings if we have a session
+  });
+  
+  // Sort recordings in descending order (newest first)
+  const recordings = [...recordingsRaw].sort((a, b) => {
+    return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
   });
 
   if (sessionError) {
