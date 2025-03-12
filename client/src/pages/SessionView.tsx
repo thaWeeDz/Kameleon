@@ -1,13 +1,16 @@
+import { useState } from "react";
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import RecordingInterface from "@/components/recording/RecordingInterface";
 import { type Session, type Recording } from "@shared/schema";
-import { AlertCircle, Mic, Video } from "lucide-react";
+import { AlertCircle, Mic, Video, Plus } from "lucide-react";
 
 export default function SessionView() {
   const { id } = useParams();
   const sessionId = Number(id);
+  const [showRecording, setShowRecording] = useState(false);
 
   const { data: session, isLoading: isSessionLoading, error: sessionError } = useQuery<Session>({ 
     queryKey: [`/api/sessions/${sessionId}`],
@@ -64,17 +67,27 @@ export default function SessionView() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Nieuwe Opname</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <RecordingInterface sessionId={sessionId} />
-        </CardContent>
-      </Card>
+      {showRecording ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Nieuwe Opname</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RecordingInterface sessionId={sessionId} />
+          </CardContent>
+        </Card>
+      ) : (
+        <Button 
+          onClick={() => setShowRecording(true)}
+          className="w-full"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Start Nieuwe Opname
+        </Button>
+      )}
 
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Eerdere Opnames</h2>
+        <h2 className="text-xl font-semibold">Opnames</h2>
         {isRecordingsLoading ? (
           <div className="animate-pulse text-muted-foreground">Opnames laden...</div>
         ) : recordings.length === 0 ? (

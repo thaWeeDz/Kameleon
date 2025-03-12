@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Mic, Video, Square, Play, Flag } from "lucide-react";
+import { Mic, Video, Square, Flag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 
@@ -19,17 +19,16 @@ interface Tag {
 
 interface RecordingInterfaceProps {
   sessionId: number;
+  onRecordingComplete: (recordingUrl: string) => void; // Added callback
 }
 
-export default function RecordingInterface({ sessionId }: RecordingInterfaceProps) {
+export default function RecordingInterface({ sessionId, onRecordingComplete }: RecordingInterfaceProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [mediaType, setMediaType] = useState<'audio' | 'video'>('video');
   const [recordingTime, setRecordingTime] = useState(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [recordedVideoUrl, setRecordedVideoUrl] = useState<string | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const playbackRef = useRef<HTMLVideoElement>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const mediaChunks = useRef<Blob[]>([]);
   const startTime = useRef<Date | null>(null);
@@ -123,9 +122,8 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
         throw new Error('Failed to upload recording');
       }
 
-      // Create a URL for immediate playback
-      const recordingUrl = URL.createObjectURL(blob);
-      setRecordedVideoUrl(recordingUrl);
+      const recordingUrl = URL.createObjectURL(blob); //Added to pass to callback
+      onRecordingComplete(recordingUrl); // Call the callback
 
       queryClient.invalidateQueries({ 
         queryKey: [`/api/sessions/${sessionId}/recordings`] 
@@ -187,13 +185,6 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
     if (mediaRecorder.current && mediaRecorder.current.state !== 'inactive') {
       mediaRecorder.current.stop();
       setIsRecording(false);
-    }
-  };
-
-  const jumpToTag = (timestamp: number) => {
-    if (playbackRef.current) {
-      playbackRef.current.currentTime = timestamp;
-      playbackRef.current.play();
     }
   };
 
@@ -269,36 +260,6 @@ export default function RecordingInterface({ sessionId }: RecordingInterfaceProp
           </>
         )}
       </div>
-
-      {/* Playback Section */}
-      {recordedVideoUrl && (
-        <div className="space-y-2">
-          <h3 className="text-lg font-medium">Laatste Opname</h3>
-          <div className="mt-2">
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">Tags:</h4>
-            <div className="flex flex-wrap gap-2">
-              {tags.map(tag => (
-                <button
-                  key={tag.id}
-                  onClick={() => jumpToTag(tag.timestamp)}
-                  className="text-sm bg-secondary hover:bg-secondary/80 px-2 py-1 rounded-md transition-colors duration-200 flex items-center gap-2"
-                >
-                  <Flag className="h-3 w-3" />
-                  {formatTime(tag.timestamp)}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="relative aspect-video bg-slate-950 rounded-lg overflow-hidden">
-            <video
-              ref={playbackRef}
-              src={recordedVideoUrl}
-              controls
-              className="w-full h-full"
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
