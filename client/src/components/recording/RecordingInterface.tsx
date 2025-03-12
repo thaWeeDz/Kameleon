@@ -67,19 +67,135 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
   // Initialize camera on component mount
   useEffect(() => {
     startCamera();
+    
+    // Add direct event listener to our video element
+    const onVolumeChange = (e: Event) => {
+      console.log('Volume changed on video element:', e);
+      if (isRecording) {
+        addTag();
+        console.log('Added tag from volume change event');
+        
+        // Focus the tag button
+        if (tagButtonRef.current) {
+          tagButtonRef.current.focus();
+        }
+      }
+    };
+    
+    // Set up event listeners once video element is ready
+    if (videoRef.current) {
+      console.log('Setting up volume event listener directly on video element');
+      videoRef.current.addEventListener('volumechange', onVolumeChange);
+    }
+    
     // Cleanup on unmount
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
+      
+      // Remove direct event listener
+      if (videoRef.current) {
+        videoRef.current.removeEventListener('volumechange', onVolumeChange);
+      }
     };
-  }, []);
+  }, [isRecording, addTag]);
 
   // Reference to the tag button for focusing
   const tagButtonRef = useRef<HTMLButtonElement>(null);
+  
+  // Apply the video element reference separately when the element mounts
+  useEffect(() => {
+    // Add volume change event listener to the video element after it's loaded
+    if (videoRef.current) {
+      console.log('Video element reference is now available!');
+      
+      // For Bluetooth remotes that might trigger media controls
+      videoRef.current.addEventListener('volumechange', (e) => {
+        console.log('Volume changed on video element (from ref effect):', e);
+        if (isRecording) {
+          addTag();
+          console.log('Added tag from video volume change event');
+          
+          // Focus the tag button
+          if (tagButtonRef.current) {
+            tagButtonRef.current.focus();
+          }
+        }
+      });
+      
+      // Debug: log all media events
+      const mediaEvents = [
+        'play', 'pause', 'playing', 'timeupdate', 'volumechange', 
+        'ratechange', 'seeked', 'seeking', 'stalled', 'waiting'
+      ];
+      
+      mediaEvents.forEach(eventName => {
+        videoRef.current?.addEventListener(eventName, (e) => {
+          console.log(`Media event '${eventName}' detected:`, e);
+        });
+      });
+    }
+    
+    return () => {
+      // Cleanup event listeners
+      if (videoRef.current) {
+        videoRef.current.removeEventListener('volumechange', () => {});
+        
+        const mediaEvents = [
+          'play', 'pause', 'playing', 'timeupdate', 'volumechange', 
+          'ratechange', 'seeked', 'seeking', 'stalled', 'waiting'
+        ];
+        
+        mediaEvents.forEach(eventName => {
+          videoRef.current?.removeEventListener(eventName, () => {});
+        });
+      }
+    };
+  }, [videoRef.current, isRecording, addTag]);
 
   // Handle keyboard shortcuts for tagging with enhanced logging
   useEffect(() => {
+    // Capture all possible events that could come from a Bluetooth device
+    const logAnyEvent = (e: Event) => {
+      if (isRecording) {
+        console.log('Event detected:', {
+          type: e.type,
+          target: e.target,
+          currentTarget: e.currentTarget,
+          timeStamp: e.timeStamp,
+          eventPhase: e.eventPhase,
+          bubbles: e.bubbles,
+          cancelable: e.cancelable,
+          defaultPrevented: e.defaultPrevented,
+          composed: e.composed,
+          isTrusted: e.isTrusted
+        });
+      }
+    };
+
+    // Log any input events for debugging
+    const handleInput = (e: Event) => {
+      if (isRecording) {
+        console.log('Input event:', e.type, e);
+        logAnyEvent(e);
+      }
+    };
+
+    // Log and handle any media events
+    const handleMedia = (e: Event) => {
+      if (isRecording) {
+        console.log('Media event:', e.type, e);
+        logAnyEvent(e);
+        // Media events like volumechange might be from the remote
+        addTag();
+        if (tagButtonRef.current) {
+          tagButtonRef.current.focus();
+        }
+      }
+    };
+
+    // Special handling for keyboard events
     const handleKeyDown = (e: KeyboardEvent) => {
       // Log all key events during recording for debugging
       if (isRecording) {
@@ -109,7 +225,9 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
           e.keyCode === 175 ||     // VolumeUp
           e.which === 175 ||       // VolumeUp in some browsers
           e.keyCode === 38 ||      // ArrowUp
-          e.which === 38           // ArrowUp in some browsers
+          e.which === 38 ||        // ArrowUp in some browsers
+          // Capture any key for testing - remove in production
+          e.key !== null           // Capture ANY key for testing
         )) {
         e.preventDefault();
         console.log('Tag key detected! Adding tag at time:', recordingTime);
@@ -122,9 +240,40 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
       }
     };
 
+    // Register all possible event listeners
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', logAnyEvent);
+    window.addEventListener('keypress', logAnyEvent);
+    
+    // Media events
+    window.addEventListener('volumechange', handleMedia);
+    
+    // Input events
+    window.addEventListener('input', handleInput);
+    window.addEventListener('change', handleInput);
+    
+    // Touch events
+    window.addEventListener('touchstart', logAnyEvent);
+    window.addEventListener('touchend', logAnyEvent);
+    
+    // Mouse events
+    window.addEventListener('mousedown', logAnyEvent);
+    window.addEventListener('mouseup', logAnyEvent);
+    window.addEventListener('click', logAnyEvent);
+
     return () => {
+      // Clean up all event listeners
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', logAnyEvent);
+      window.removeEventListener('keypress', logAnyEvent);
+      window.removeEventListener('volumechange', handleMedia);
+      window.removeEventListener('input', handleInput);
+      window.removeEventListener('change', handleInput);
+      window.removeEventListener('touchstart', logAnyEvent);
+      window.removeEventListener('touchend', logAnyEvent);
+      window.removeEventListener('mousedown', logAnyEvent);
+      window.removeEventListener('mouseup', logAnyEvent);
+      window.removeEventListener('click', logAnyEvent);
     };
   }, [isRecording, addTag, recordingTime]); // Re-add listener when recording state or addTag changes
 
