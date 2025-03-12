@@ -78,15 +78,19 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
   // Reference to the tag button for focusing
   const tagButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Handle spacebar keypress for tagging
+  // Handle keyboard shortcuts for tagging
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Only trigger on spacebar when recording
-      if (e.key === ' ' && isRecording) {
-        e.preventDefault(); // Prevent any default spacebar actions
+      // Support multiple keys for tagging: VolumeUp, ArrowUp, PageUp
+      if (isRecording && (
+          e.code === 'AudioVolumeUp' || 
+          e.code === 'ArrowUp' || 
+          e.code === 'PageUp'
+        )) {
+        e.preventDefault();
         addTag();
         
-        // Focus the tag button to prevent focus on the stop button
+        // Focus the tag button
         if (tagButtonRef.current) {
           tagButtonRef.current.focus();
         }
@@ -293,7 +297,12 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
         {/* Live Tag Markers - Always show container when recording */}
         {isRecording && (
           <div className="bg-slate-100 p-2 rounded-lg">
-            <h4 className="text-sm font-medium mb-1">Getagde momenten:</h4>
+            <div className="flex justify-between items-center mb-1">
+              <h4 className="text-sm font-medium">Getagde momenten:</h4>
+              <span className="text-xs text-gray-500">
+                <span className="inline-block bg-gray-200 px-1 rounded">↑</span> voor tag
+              </span>
+            </div>
             <div className="flex flex-wrap gap-2">
               {tags.length > 0 ? (
                 <>
