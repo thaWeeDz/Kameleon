@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/select";
 import { Mic, Video, Square, Flag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 
 interface Tag {
   id: string;
@@ -19,7 +19,7 @@ interface Tag {
 
 interface RecordingInterfaceProps {
   sessionId: number;
-  onRecordingComplete: (recordingUrl: string) => void; // Added callback
+  onRecordingComplete: (recordingUrl: string) => void;
 }
 
 export default function RecordingInterface({ sessionId, onRecordingComplete }: RecordingInterfaceProps) {
@@ -34,6 +34,29 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
   const startTime = useRef<Date | null>(null);
   const currentTagsRef = useRef<Tag[]>([]);
   const { toast } = useToast();
+  
+  // Format time for display (mm:ss)
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+  
+  // Create a stable addTag function with useCallback
+  const addTag = useCallback(() => {
+    const newTag: Tag = {
+      id: crypto.randomUUID(),
+      timestamp: recordingTime,
+      created_at: new Date().toISOString()
+    };
+    
+    // Add tag to state
+    const updatedTags = [...tags, newTag];
+    setTags(updatedTags);
+    
+    console.log('Tag added:', newTag);
+    console.log('Current tags:', updatedTags);
+  }, [recordingTime, tags]);
   
   // Keep track of the current tags
   useEffect(() => {
@@ -52,6 +75,23 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
     };
   }, []);
 
+  // Handle spacebar keypress for tagging
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only trigger on spacebar when recording
+      if (e.key === ' ' && isRecording) {
+        e.preventDefault(); // Prevent any default spacebar actions
+        addTag();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isRecording, addTag]); // Re-add listener when recording state or addTag changes
+
+  // Update recording timer
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isRecording) {
@@ -61,32 +101,6 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
     }
     return () => clearInterval(timer);
   }, [isRecording]);
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const addTag = () => {
-    const newTag: Tag = {
-      id: crypto.randomUUID(),
-      timestamp: recordingTime,
-      created_at: new Date().toISOString()
-    };
-    
-    // Add tag to state
-    const updatedTags = [...tags, newTag];
-    setTags(updatedTags);
-    
-    console.log('Tag added:', newTag);
-    console.log('Current tags:', updatedTags);
-    
-    toast({
-      title: "Moment getagd",
-      description: `Tijdstip ${formatTime(recordingTime)} gemarkeerd`,
-    });
-  };
 
   const startCamera = async () => {
     try {
