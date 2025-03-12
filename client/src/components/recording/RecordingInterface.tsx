@@ -283,21 +283,27 @@ export default function RecordingInterface({ sessionId, onRecordingComplete }: R
           />
         </div>
         
-        {/* Live Tag Markers */}
-        {isRecording && tags.length > 0 && (
+        {/* Live Tag Markers - Always show container when recording */}
+        {isRecording && (
           <div className="bg-slate-100 p-2 rounded-lg">
             <h4 className="text-sm font-medium mb-1">Getagde momenten:</h4>
-            <div className="flex flex-wrap gap-2">
-              {tags.map(tag => (
-                <div 
-                  key={tag.id}
-                  className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center"
-                >
-                  <Flag className="h-3 w-3 mr-1" />
-                  {formatTime(tag.timestamp)}
-                </div>
-              ))}
-            </div>
+            {tags.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {tags.map(tag => (
+                  <div 
+                    key={tag.id}
+                    className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center"
+                  >
+                    <Flag className="h-3 w-3 mr-1" />
+                    {formatTime(tag.timestamp)}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-muted-foreground text-sm italic">
+                Nog geen momenten getagd. Klik op "Tag Moment" om een moment te markeren.
+              </div>
+            )}
           </div>
         )}
       </div>
